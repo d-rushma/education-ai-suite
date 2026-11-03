@@ -3,8 +3,7 @@ name: sc-upload
 description: >
   Upload a file to the Content Search backend and poll the ingestion task until
   the file is fully indexed (status COMPLETED). Handles duplicate detection
-  (code 40901), cleanup-and-retry, and task timeout. Supported file types: pdf,
-  txt, docx, doc, pptx, ppt, xlsx, xls, jpg, jpeg, png, mp4, avi, mov, mkv.
+  (code 40901), cleanup-and-retry, and task timeout. Supports common document, image, and video formats.
   Use when the user says "upload a file", "ingest a document", "upload pdf",
   "index a file", "add course material", "upload video", "upload image", or
   "ingest content".
@@ -25,7 +24,7 @@ Set `$BASE = "http://127.0.0.1:9011"` for all snippets.
 ### Set corporate proxy (required for any outbound download; localhost API calls bypass it)
 
 Probe health first — if the backend is unreachable, use
-[`sc-doctor`](../sc-doctor/SKILL.md) / [`sc-up`](../sc-up/SKILL.md):
+the `sc-doctor` / `sc-up` skills:
 
 ```powershell
 $BASE = "http://127.0.0.1:9011"
