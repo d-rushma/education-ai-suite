@@ -72,11 +72,15 @@ $fileType = switch ($extension) {
 $fileName = [System.IO.Path]::GetFileName($FilePath)
 
 # Manually construct JSON to ensure tags is always an array (not a string)
+# Videos default to vs_enabled=true: the backend defaults vs_enabled to false
+# when absent, which silently skips VLM summarization and starves later Q&A
+# of video content. Only set $false here if the user explicitly opts out.
+$vsEnabledJson = if ($fileType -eq "video") { ',"vs_enabled":true' } else { '' }
 if ($Tags) {
     $tagsList = ($Tags -split ',' | ForEach-Object { "`"$($_.Trim())`"" }) -join ","
-    $meta = "{`"file_name`":`"$fileName`",`"type`":`"$fileType`",`"tags`":[$tagsList]}"
+    $meta = "{`"file_name`":`"$fileName`",`"type`":`"$fileType`",`"tags`":[$tagsList]$vsEnabledJson}"
 } else {
-    $meta = "{`"file_name`":`"$fileName`",`"type`":`"$fileType`"}"
+    $meta = "{`"file_name`":`"$fileName`",`"type`":`"$fileType`"$vsEnabledJson}"
 }
 
 # Build multipart form and POST
@@ -193,7 +197,9 @@ When `OCR_ENABLED=true` (environment variable), PDF files are automatically proc
 ### Video Summarization
 
 When `VIDEO_SUMMARIZATION_ENABLED=true` (default), videos can be summarized:
-1. Pass `vs_enabled: true` in the `meta` object to enable per-file
+1. `vs_enabled: true` is set automatically for `video` type uploads in step 1 above
+   (the backend defaults `vs_enabled` to `false` when absent, which silently
+   skips summarization and leaves later Q&A with no text content for that video)
 2. Optionally provide `prompt` and `chunk_duration` in the upload request
 3. Summarization runs AFTER the task is marked `COMPLETED` (file is already searchable)
 4. The `task.result` includes `video_summary` and `video_summary_status`
