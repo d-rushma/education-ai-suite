@@ -413,7 +413,8 @@ class VideoAnalyticsPipelineService:
         """
         if not options.output_stream:
             return ["fakesink", "async=false", "sync=false"]
-        return self._get_rtsp_sink_elements(
+        upload_elements = ["d3d11upload", "!"] if options.device == "CPU" else []
+        return upload_elements + self._get_rtsp_sink_elements(
             options.output_rtsp, stream_name, sink_framerate
         )
 

@@ -11,6 +11,8 @@ boxes in between (gvaposturedetect holds their postures).
 The service is built with object.__new__, as in test_va_pipeline_stop.py.
 """
 
+import pytest
+
 from components.va.va_pipeline_service import PipelineOptions, VideoAnalyticsPipelineService
 
 
@@ -54,3 +56,29 @@ def test_reshape_without_interval_has_no_tracker(tmp_path):
     seg = detect_segment(make_service("1280x736", 1), tmp_path)
     assert "reshape-width=1280" in seg and "reshape-height=736" in seg
     assert "gvatrack" not in seg
+
+
+@pytest.mark.parametrize("device", ["CPU", "GPU", "NPU"])
+@pytest.mark.parametrize("stream_name", ["front_stream", "back_stream", "content_stream"])
+def test_video_sink_uploads_only_cpu_frames(device, stream_name):
+    service = make_service()
+    options = PipelineOptions(device=device)
+    elements = service._get_video_sink_elements(options, stream_name, "15/1")
+    expected_sink = service._get_rtsp_sink_elements(options.output_rtsp, stream_name, "15/1")
+
+    if device == "CPU":
+        assert elements == ["d3d11upload", "!", *expected_sink]
+        assert elements[:3] == ["d3d11upload", "!", "d3d11convert"]
+        assert service._memory_caps(options) == "video/x-raw"
+        assert service._get_preprocess_backend_elements(options) == ["pre-process-backend=opencv"]
+    else:
+        assert elements == expected_sink
+        assert "d3d11upload" not in elements
+
+
+@pytest.mark.parametrize("device", ["CPU", "GPU", "NPU"])
+def test_disabled_video_stream_does_not_upload_frames(device):
+    options = PipelineOptions(device=device, output_stream=False)
+    assert make_service()._get_video_sink_elements(options, "content_stream", "15/1") == [
+        "fakesink", "async=false", "sync=false"
+    ]
